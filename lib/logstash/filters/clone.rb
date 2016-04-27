@@ -1,6 +1,7 @@
 # encoding: utf-8
 require "logstash/filters/base"
 require "logstash/namespace"
+require "logstash/event"
 
 # The clone filter is for duplicating events.
 # A clone will be made for each type in the clone list.
@@ -11,6 +12,7 @@ class LogStash::Filters::Clone < LogStash::Filters::Base
 
   # A new clone will be created with the given type for each type in this list.
   config :clones, :validate => :array, :default => []
+  config :meta, :validate => :boolean, :default => true
 
   public
   def register
@@ -19,9 +21,12 @@ class LogStash::Filters::Clone < LogStash::Filters::Base
 
   public
   def filter(event)
-    
     @clones.each do |type|
-      clone = event.clone
+      if @meta
+        clone = LogStash::Event.new(event.to_hash_with_metadata)
+      else
+        clone = event.clone
+      end
       clone["type"] = type
       filter_matched(clone)
       @logger.debug("Cloned event", :clone => clone, :event => event)
